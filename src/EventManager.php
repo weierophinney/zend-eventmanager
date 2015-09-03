@@ -12,7 +12,6 @@ namespace Zend\EventManager;
 use ArrayAccess;
 use ArrayObject;
 use Traversable;
-use Zend\Stdlib\CallbackHandler;
 use Zend\Stdlib\PriorityQueue;
 
 /**
@@ -41,10 +40,22 @@ class EventManager implements EventManagerInterface
     protected $identifiers = [];
 
     /**
+     * Have shared/wildcard listeners been prepared already?
+     *
+     * @var bool
+     */
+    private $isPrepared = false;
+
+    /**
      * Shared event manager
      * @var false|null|SharedEventManagerInterface
      */
     protected $sharedManager = null;
+
+    /**
+     * @var array List of wildcard listeners.
+     */
+    private $wildcardListeners = [];
 
     /**
      * Constructor
@@ -54,9 +65,15 @@ class EventManager implements EventManagerInterface
      *
      * @param  null|string|int|array|Traversable $identifiers
      */
-    public function __construct($identifiers = null)
+    public function __construct($identifiers = null, SharedEventManagerInterface $sharedEventManager = null)
     {
-        $this->setIdentifiers($identifiers);
+        if ($sharedEventManager) {
+            $this->sharedManager = $sharedEventManager;
+        }
+
+        if ($identifiers !== null) {
+            $this->setIdentifiers($identifiers);
+        }
     }
 
     /**
@@ -80,46 +97,7 @@ class EventManager implements EventManagerInterface
     public function setSharedManager(SharedEventManagerInterface $sharedEventManager)
     {
         $this->sharedManager = $sharedEventManager;
-        StaticEventManager::setInstance($sharedEventManager);
         return $this;
-    }
-
-    /**
-     * Remove any shared event manager currently attached
-     *
-     * @return void
-     */
-    public function unsetSharedManager()
-    {
-        $this->sharedManager = false;
-    }
-
-    /**
-     * Get shared event manager
-     *
-     * If one is not defined, but we have a static instance in
-     * StaticEventManager, that one will be used and set in this instance.
-     *
-     * If none is available in the StaticEventManager, a boolean false is
-     * returned.
-     *
-     * @return false|SharedEventManagerInterface
-     */
-    public function getSharedManager()
-    {
-        // "false" means "I do not want a shared manager; don't try and fetch one"
-        if (false === $this->sharedManager
-            || $this->sharedManager instanceof SharedEventManagerInterface
-        ) {
-            return $this->sharedManager;
-        }
-
-        if (!StaticEventManager::hasInstance()) {
-            return false;
-        }
-
-        $this->sharedManager = StaticEventManager::getInstance();
-        return $this->sharedManager;
     }
 
     /**
@@ -135,32 +113,44 @@ class EventManager implements EventManagerInterface
     /**
      * Set the identifiers (overrides any currently set identifiers)
      *
-     * @param string|int|array|Traversable $identifiers
+     * @param string|string[]|Traversable $identifiers
      * @return EventManager Provides a fluent interface
      */
     public function setIdentifiers($identifiers)
     {
-        if (is_array($identifiers) || $identifiers instanceof Traversable) {
-            $this->identifiers = array_unique((array) $identifiers);
-        } elseif ($identifiers !== null) {
-            $this->identifiers = [$identifiers];
+        if ($this->isPrepared) {
+            throw new Exception\RuntimeException(sprintf(
+                '%s cannot be called after any events have been triggered',
+                __METHOD__
+            ));
         }
+
+        $this->identifiers = array_unique($this->prepareIdentifiers($identifiers));
+
         return $this;
     }
 
     /**
-     * Add some identifier(s) (appends to any currently set identifiers)
+     * Add identifier(s) (appends to any currently set identifiers)
      *
      * @param string|int|array|Traversable $identifiers
      * @return EventManager Provides a fluent interface
+     * @throws Exception\RuntimeException if called more than once.
      */
     public function addIdentifiers($identifiers)
     {
-        if (is_array($identifiers) || $identifiers instanceof Traversable) {
-            $this->identifiers = array_unique(array_merge($this->identifiers, (array) $identifiers));
-        } elseif ($identifiers !== null) {
-            $this->identifiers = array_unique(array_merge($this->identifiers, [$identifiers]));
+        if ($this->isPrepared) {
+            throw new Exception\RuntimeException(sprintf(
+                '%s cannot be called after any events have been triggered',
+                __METHOD__
+            ));
         }
+
+        $this->identifiers = array_unique(array_merge(
+            $this->identifiers,
+            $this->prepareIdentifiers($identifiers)
+        ));
+
         return $this;
     }
 
@@ -174,8 +164,10 @@ class EventManager implements EventManagerInterface
      * @return ResponseCollection All listener return values
      * @throws Exception\InvalidCallbackException
      */
-    public function trigger($event, $target = null, $argv = [], $callback = null)
+    public function trigger($event, $target = null, $argv = array(), callable $callback = null)
     {
+        $this->prepareListeners();
+
         if ($event instanceof EventInterface) {
             $e        = $event;
             $event    = $e->getName();
@@ -202,75 +194,54 @@ class EventManager implements EventManagerInterface
         // Initial value of stop propagation flag should be false
         $e->stopPropagation(false);
 
-        return $this->triggerListeners($event, $e, $callback);
-    }
-
-    /**
-     * Trigger listeners until return value of one causes a callback to
-     * evaluate to true
-     *
-     * Triggers listeners until the provided callback evaluates the return
-     * value of one as true, or until all listeners have been executed.
-     *
-     * @param  string|EventInterface $event
-     * @param  string|object $target Object calling emit, or symbol describing target (such as static method name)
-     * @param  array|ArrayAccess $argv Array of arguments; typically, should be associative
-     * @param  callable $callback
-     * @return ResponseCollection
-     * @deprecated Please use trigger()
-     * @throws Exception\InvalidCallbackException if invalid callable provided
-     */
-    public function triggerUntil($event, $target, $argv = null, $callback = null)
-    {
-        trigger_error(
-            'This method is deprecated and will be removed in the future. Please use trigger() instead.',
-            E_USER_DEPRECATED
-        );
-        return $this->trigger($event, $target, $argv, $callback);
+        return $this->triggerListeners($e, $callback);
     }
 
     /**
      * Attach a listener to an event
      *
-     * The first argument is the event, and the next argument describes a
-     * callback that will respond to that event. A CallbackHandler instance
-     * describing the event listener combination will be returned.
+     * The first argument is the event, and the next argument is a
+     * callable that will respond to that event.
      *
      * The last argument indicates a priority at which the event should be
-     * executed. By default, this value is 1; however, you may set it for any
+     * executed; by default, this value is 1; however, you may set it for any
      * integer value. Higher values have higher priority (i.e., execute first).
      *
      * You can specify "*" for the event name. In such cases, the listener will
-     * be triggered for every event.
+     * be triggered for every event *that has registered listeners at the time
+     * it is attached*. As such, register wildcard events last whenever possible!
      *
-     * @param  string|array|ListenerAggregateInterface $event An event or array of event names. If a ListenerAggregateInterface, proxies to {@link attachAggregate()}.
-     * @param  callable|int $callback If string $event provided, expects PHP callback; for a ListenerAggregateInterface $event, this will be the priority
-     * @param  int $priority If provided, the priority at which to register the callable
-     * @return CallbackHandler|mixed CallbackHandler if attaching callable (to allow later unsubscribe); mixed if attaching aggregate
+     * @param  string|string[] $event An event or array of event names.
+     * @param  callable $listener Event listener.
+     * @param  int $priority If provided, the priority at which to register the
+     *     listener.
      * @throws Exception\InvalidArgumentException
      */
-    public function attach($event, $callback = null, $priority = 1)
+    public function attach($event, callable $listener, $priority = 1)
     {
-        // Proxy ListenerAggregateInterface arguments to attachAggregate()
-        if ($event instanceof ListenerAggregateInterface) {
-            return $this->attachAggregate($event, $callback);
-        }
-
-        // Null callback is invalid
-        if (null === $callback) {
+        if (! is_string($event) && ! is_array($event) && ! $event instanceof Traversable) {
             throw new Exception\InvalidArgumentException(sprintf(
-                '%s: expects a callback; none provided',
-                __METHOD__
+                '%s expects a string or array/Traversable of strings for the event; received %s',
+                (is_object($event) ? get_class($event) : gettype($event))
             ));
         }
 
         // Array of events should be registered individually, and return an array of all listeners
-        if (is_array($event)) {
-            $listeners = [];
+        if (! is_string($event)) {
             foreach ($event as $name) {
-                $listeners[] = $this->attach($name, $callback, $priority);
+                $this->attach($name, $listener, $priority);
             }
-            return $listeners;
+            return;
+        }
+
+        // Is this the wildcard event? If so, add the listener to the wildcard
+        // list with its priority, to inject later.
+        if ('*' === $event) {
+            $this->wildcardListeners[] = [
+                'listener' => $listener,
+                'priority' => $priority,
+            ];
+            return;
         }
 
         // If we don't have a priority queue for the event yet, create one
@@ -278,12 +249,8 @@ class EventManager implements EventManagerInterface
             $this->events[$event] = new PriorityQueue();
         }
 
-        // Create a callback handler, setting the event and priority in its metadata
-        $listener = new CallbackHandler($callback, ['event' => $event, 'priority' => $priority]);
-
-        // Inject the callback handler into the queue
+        // Inject the listener into the queue
         $this->events[$event]->insert($listener, $priority);
-        return $listener;
     }
 
     /**
@@ -300,55 +267,6 @@ class EventManager implements EventManagerInterface
     public function attachAggregate(ListenerAggregateInterface $aggregate, $priority = 1)
     {
         return $aggregate->attach($this, $priority);
-    }
-
-    /**
-     * Unsubscribe a listener from an event
-     *
-     * @param  CallbackHandler|ListenerAggregateInterface $listener
-     * @return bool Returns true if event and listener found, and unsubscribed; returns false if either event or listener not found
-     * @throws Exception\InvalidArgumentException if invalid listener provided
-     */
-    public function detach($listener)
-    {
-        if ($listener instanceof ListenerAggregateInterface) {
-            return $this->detachAggregate($listener);
-        }
-
-        if (!$listener instanceof CallbackHandler) {
-            throw new Exception\InvalidArgumentException(sprintf(
-                '%s: expected a ListenerAggregateInterface or CallbackHandler; received "%s"',
-                __METHOD__,
-                (is_object($listener) ? get_class($listener) : gettype($listener))
-            ));
-        }
-
-        $event = $listener->getMetadatum('event');
-        if (!$event || empty($this->events[$event])) {
-            return false;
-        }
-        $return = $this->events[$event]->remove($listener);
-        if (!$return) {
-            return false;
-        }
-        if (!count($this->events[$event])) {
-            unset($this->events[$event]);
-        }
-        return true;
-    }
-
-    /**
-     * Detach a listener aggregate
-     *
-     * Listener aggregates accept an EventManagerInterface instance, and call detach()
-     * of all previously attached listeners.
-     *
-     * @param  ListenerAggregateInterface $aggregate
-     * @return mixed return value of {@link ListenerAggregateInterface::detach()}
-     */
-    public function detachAggregate(ListenerAggregateInterface $aggregate)
-    {
-        return $aggregate->detach($this);
     }
 
     /**
@@ -369,9 +287,10 @@ class EventManager implements EventManagerInterface
      */
     public function getListeners($event)
     {
-        if (!array_key_exists($event, $this->events)) {
+        if (! array_key_exists($event, $this->events)) {
             return new PriorityQueue();
         }
+
         return $this->events[$event];
     }
 
@@ -383,9 +302,11 @@ class EventManager implements EventManagerInterface
      */
     public function clearListeners($event)
     {
-        if (!empty($this->events[$event])) {
-            unset($this->events[$event]);
+        if (empty($this->events[$event])) {
+            return;
         }
+
+        unset($this->events[$event]);
     }
 
     /**
@@ -408,50 +329,28 @@ class EventManager implements EventManagerInterface
      *
      * Actual functionality for triggering listeners, to which trigger() delegate.
      *
-     * @param  string           $event Event name
-     * @param  EventInterface $e
-     * @param  null|callable    $callback
+     * @param  EventInterface $event
+     * @param  null|callable $callback
      * @return ResponseCollection
      */
-    protected function triggerListeners($event, EventInterface $e, $callback = null)
+    protected function triggerListeners(EventInterface $event, callable $callback = null)
     {
         $responses = new ResponseCollection;
-        $listeners = $this->getListeners($event);
 
-        // Add shared/wildcard listeners to the list of listeners,
-        // but don't modify the listeners object
-        $sharedListeners         = $this->getSharedListeners($event);
-        $sharedWildcardListeners = $this->getSharedListeners('*');
-        $wildcardListeners       = $this->getListeners('*');
-        if (count($sharedListeners) || count($sharedWildcardListeners) || count($wildcardListeners)) {
-            $listeners = clone $listeners;
-
-            // Shared listeners on this specific event
-            $this->insertListeners($listeners, $sharedListeners);
-
-            // Shared wildcard listeners
-            $this->insertListeners($listeners, $sharedWildcardListeners);
-
-            // Add wildcard listeners
-            $this->insertListeners($listeners, $wildcardListeners);
-        }
-
-        foreach ($listeners as $listener) {
-            $listenerCallback = $listener->getCallback();
-
-            // Trigger the listener's callback, and push its result onto the
-            // response collection
-            $responses->push(call_user_func($listenerCallback, $e));
+        foreach ($this->getListeners($event->getName()) as $listener) {
+            // Trigger the listener, and push its result onto the response collection
+            $response = call_user_func($listener, $event);
+            $responses->push($response);
 
             // If the event was asked to stop propagating, do so
-            if ($e->propagationIsStopped()) {
+            if ($event->propagationIsStopped()) {
                 $responses->setStopped(true);
                 break;
             }
 
             // If the result causes our validation callback to return true,
             // stop propagation
-            if ($callback && call_user_func($callback, $responses->last())) {
+            if ($callback && call_user_func($callback, $response)) {
                 $responses->setStopped(true);
                 break;
             }
@@ -461,66 +360,109 @@ class EventManager implements EventManagerInterface
     }
 
     /**
-     * Get list of all listeners attached to the shared event manager for
-     * identifiers registered by this instance
+     * Prepare identifier arguments to inject in the instance.
      *
-     * @param  string $event
+     * @param string|string[]|Traversable $identifiers
      * @return array
+     * @throws Exception\InvalidArgumentException for invalid identifiers.
      */
-    protected function getSharedListeners($event)
+    private function prepareIdentifiers($identifiers)
     {
-        if (!$sharedManager = $this->getSharedManager()) {
-            return [];
+        if ($identifiers instanceof Traversable) {
+            $identifiers = iterator_to_array($identifiers);
         }
 
-        $identifiers     = $this->getIdentifiers();
-        //Add wildcard id to the search, if not already added
-        if (!in_array('*', $identifiers)) {
-            $identifiers[] = '*';
-        }
-        $sharedListeners = [];
-
-        foreach ($identifiers as $id) {
-            if (!$listeners = $sharedManager->getListeners($id, $event)) {
-                continue;
-            }
-
-            if (!is_array($listeners) && !($listeners instanceof Traversable)) {
-                continue;
-            }
-
-            foreach ($listeners as $listener) {
-                if (!$listener instanceof CallbackHandler) {
-                    continue;
-                }
-                $sharedListeners[] = $listener;
-            }
+        if (is_string($identifiers) && ! empty($identifiers)) {
+            $identifiers = (array) $identifiers;
         }
 
-        return $sharedListeners;
+        if (! is_array($identifiers)) {
+            throw new Exception\InvalidArgumentException(sprintf(
+                'Identifiers must be a non-empty string, an array, or a Traversable set; received %s',
+                (is_object($identifiers) ? get_class($identifiers) : gettype($identifiers))
+            ));
+        }
+
+        return $identifiers;
     }
 
     /**
-     * Add listeners to the master queue of listeners
+     * Prepare listeners.
      *
-     * Used to inject shared listeners and wildcard listeners.
+     * Attaches all listeners from the shared event manager to the current
+     * instance by:
      *
-     * @param  PriorityQueue $masterListeners
-     * @param  array|Traversable $listeners
-     * @return void
+     * - Looping through identifiers in this instance, and attaching any
+     *   listeners from the shared manager on the given identifier.
+     * - Looping through shared listeners on the wildcard identifier.
+     * - Looping through any listeners on wildcard events and attaching them.
+     *
+     * This method is only called once per instance, the first time any event
+     * is triggered; as such, all shared and wildcard listeners MUST be
+     * injected BEFORE the first trigger.
      */
-    protected function insertListeners($masterListeners, $listeners)
+    private function prepareListeners()
     {
-        foreach ($listeners as $listener) {
-            $priority = $listener->getMetadatum('priority');
-            if (null === $priority) {
-                $priority = 1;
-            } elseif (is_array($priority)) {
-                // If we have an array, likely using PriorityQueue. Grab first
-                // element of the array, as that's the actual priority.
-                $priority = array_shift($priority);
+        if ($this->isPrepared) {
+            return;
+        }
+
+        if ($this->sharedManager) {
+            $this->attachSharedListeners();
+        }
+
+        $this->prepareWildcardListeners($this->getEvents(), $this->wildcardListeners);
+
+        $this->isPrepared = true;
+    }
+
+    /**
+     * Attach shared listeners.
+     *
+     * Attaches shared listeners for identifiers in the current instance, as
+     * well as any on the wildcard listener.
+     */
+    private function attachSharedListeners()
+    {
+        foreach ($this->identifiers as $identifier) {
+            foreach ($this->sharedManager->getListeners($identifier) as $event => $listeners) {
+                $this->attachListenerStructs($event, $listeners);
             }
-            $masterListeners->insert($listener, $priority);
+        }
+
+        foreach ($this->sharedManager->getListeners('*') as $event => $listeners) {
+            $this->attachListenerStructs($event, $listeners);
+        }
+    }
+
+    /**
+     * Attach listener structs to a given event.
+     *
+     * Loops through each listener struct, attaching the listener at the given
+     * priority to the specified event.
+     *
+     * @param string $event
+     * @param array $listeners
+     */
+    private function attachListenerStructs($event, array $listeners)
+    {
+        foreach ($listeners as $struct) {
+            $this->attach($event, $struct['listener'], $struct['priority']);
+        }
+    }
+
+    /**
+     * Inject wildcard listeners.
+     *
+     * Loops through each event, injecting each wildcard listener available.
+     *
+     * @param array $events
+     * @param array $listeners
+     */
+    private function prepareWildcardListeners(array $events, array $listeners)
+    {
+        foreach ($events as $event) {
+            $this->attachListenerStructs($event, $listeners);
         }
     }
 }
