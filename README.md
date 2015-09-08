@@ -16,3 +16,14 @@ and interrupt execution of listeners.
 
 - File issues at https://github.com/zendframework/zend-eventmanager/issues
 - Documentation is at http://framework.zend.com/manual/current/en/index.html#zend-eventmanager
+
+## Benchmark
+
+We provided a set of benchmarks using the [Athletic](https://github.com/polyfractal/athletic)
+framework. The benchmarks of zend-eventmanager are store in the folder `/benchmarks`.
+
+To execute the benchmarks you can run the following command:
+
+```
+vendor/bin/athletic -p benchmarks
+```
