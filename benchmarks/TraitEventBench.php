@@ -1,13 +1,14 @@
 <?php
 namespace ZendBench\EventManager;
 
-trait TraitEventBench {
-
+trait TraitEventBench
+{
     private $numListeners = 50;
 
     private function generateCallback()
     {
-        return function ($e) {};
+        return function ($e) {
+        };
     }
 
     private function getEventList()
@@ -28,7 +29,6 @@ trait TraitEventBench {
             'Zend\Mvc\Controller\AbstractRestfulController',
             'ZF\Rest\RestController',
             'CustomRestController',
-            '*',
         ];
     }
 }

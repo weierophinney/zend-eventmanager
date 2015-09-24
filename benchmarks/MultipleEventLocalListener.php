@@ -9,9 +9,15 @@ class MultipleEventLocalListener extends AthleticEvent
 {
     use TraitEventBench;
 
+    private $eventsToTrigger;
+
     public function setUp()
     {
         $this->events = new EventManager();
+
+        $this->eventsToTrigger = array_filter($this->getEventList(), function ($value) {
+            return ($value !== '*');
+        });
     }
 
     /**
@@ -21,7 +27,7 @@ class MultipleEventLocalListener extends AthleticEvent
      */
     public function trigger()
     {
-        foreach ($this->getEventList() as $event) {
+        foreach ($this->eventsToTrigger as $event) {
             $this->events->attach($event, $this->generateCallback());
             $this->events->trigger($event);
         }

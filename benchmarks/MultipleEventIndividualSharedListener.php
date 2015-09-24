@@ -14,6 +14,8 @@ class MultipleEventIndividualSharedListener extends AthleticEvent
 
     private $events;
 
+    private $eventsToTrigger;
+
     public function setUp()
     {
         $identifiers = $this->getIdentifierList();
@@ -23,7 +25,11 @@ class MultipleEventIndividualSharedListener extends AthleticEvent
         }
         $this->events = new EventManager();
         $this->events->setSharedManager($this->sharedEvents);
-        $this->events->setIdentifiers($identifiers[0]);
+        $this->events->setIdentifiers([$identifiers[0]]);
+
+        $this->eventsToTrigger = array_filter($this->getEventList(), function ($value) {
+            return ($value !== '*');
+        });
     }
 
     /**
@@ -33,7 +39,7 @@ class MultipleEventIndividualSharedListener extends AthleticEvent
      */
     public function trigger()
     {
-        foreach ($this->getEventList() as $event) {
+        foreach ($this->eventsToTrigger as $event) {
             $this->events->trigger($event);
         }
     }
