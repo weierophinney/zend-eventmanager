@@ -22,6 +22,7 @@ class SharedEventManager implements SharedEventManagerInterface
 {
     /**
      * Identifiers with event connections
+     *
      * @var array
      */
     protected $identifiers = [];
