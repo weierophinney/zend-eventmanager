@@ -9,8 +9,6 @@
 
 namespace Zend\EventManager;
 
-use Traversable;
-
 /**
  * Interface for messengers
  */
@@ -106,21 +104,6 @@ interface EventManagerInterface extends SharedEventManagerAwareInterface
      *     indicate all events.
      */
     public function detach(callable $listener, $event = null);
-
-    /**
-     * Get a list of events for which this collection has listeners
-     *
-     * @return array
-     */
-    public function getEvents();
-
-    /**
-     * Retrieve a list of listeners registered to a given event
-     *
-     * @param  string $event
-     * @return array|object
-     */
-    public function getListeners($event);
 
     /**
      * Clear all listeners for a given event

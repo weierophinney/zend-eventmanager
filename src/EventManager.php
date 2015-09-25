@@ -12,7 +12,6 @@ namespace Zend\EventManager;
 use ArrayAccess;
 use ArrayObject;
 use Traversable;
-use Zend\Stdlib\FastPriorityQueue;
 
 /**
  * Event manager: notification system
@@ -24,7 +23,7 @@ class EventManager implements EventManagerInterface
 {
     /**
      * Subscribed events and their listeners
-     * @var FastPriorityQueue[]
+     * @var array[]
      */
     protected $events = [];
 
@@ -40,21 +39,10 @@ class EventManager implements EventManagerInterface
     protected $identifiers = [];
 
     /**
-     * Cached list of shared listeners already attached to this instance.
-     * @var array
-     */
-    protected $sharedListeners = [];
-
-    /**
      * Shared event manager
      * @var false|null|SharedEventManagerInterface
      */
     protected $sharedManager = null;
-
-    /**
-     * @var array List of wildcard listeners.
-     */
-    private $wildcardListeners = [];
 
     /**
      * Constructor
@@ -84,19 +72,17 @@ class EventManager implements EventManagerInterface
     public function setEventPrototype(EventInterface $prototype)
     {
         $this->eventPrototype = $prototype;
-        return $this;
     }
 
     /**
      * Set shared event manager
      *
      * @param SharedEventManagerInterface $sharedEventManager
-     * @return EventManager
+     * @return void
      */
     public function setSharedManager(SharedEventManagerInterface $sharedEventManager)
     {
         $this->sharedManager = $sharedEventManager;
-        return $this;
     }
 
     /**
@@ -126,7 +112,6 @@ class EventManager implements EventManagerInterface
     public function setIdentifiers(array $identifiers)
     {
         $this->identifiers = array_unique($identifiers);
-        return $this;
     }
 
     /**
@@ -142,8 +127,6 @@ class EventManager implements EventManagerInterface
             $this->identifiers,
             $identifiers
         ));
-
-        return $this;
     }
 
     /**
@@ -322,31 +305,6 @@ class EventManager implements EventManagerInterface
     }
 
     /**
-     * Retrieve all registered events
-     *
-     * @return array
-     */
-    public function getEvents()
-    {
-        return array_keys($this->events);
-    }
-
-    /**
-     * Retrieve all listeners for a given event
-     *
-     * @param  string $event
-     * @return FastPriorityQueue
-     */
-    public function getListeners($event)
-    {
-        if (! array_key_exists($event, $this->events)) {
-            return new FastPriorityQueue();
-        }
-
-        return $this->events[$event];
-    }
-
-    /**
      * Clear all listeners for a given event
      *
      * @param  string $event
@@ -395,7 +353,7 @@ class EventManager implements EventManagerInterface
         $event->stopPropagation(false);
         $responses = new ResponseCollection();
 
-        foreach ($this->getListenersForEvent($event) as $listener) {
+        foreach ($this->getListeners($event) as $listener) {
             $latestResponse = $listener($event);
             $responses[]    = $latestResponse;
 
@@ -417,11 +375,12 @@ class EventManager implements EventManagerInterface
      * @param  string $event
      * @return callable[]
      */
-    private function getListenersForEvent($event)
+    private function getListeners($event)
     {
         $listeners = array_merge_recursive(
             isset($this->events[$event]) ? $this->events[$event] : [],
-            isset($this->events['*']) ? $this->events['*'] : []
+            isset($this->events['*']) ? $this->events['*'] : [],
+            $this->sharedManager ? $this->sharedManager->getListeners($this->identifiers, $event) : []
         );
 
         krsort($listeners, SORT_NUMERIC);
@@ -429,20 +388,6 @@ class EventManager implements EventManagerInterface
         foreach ($listeners as $priority => $listenersByPriority) {
             foreach ($listenersByPriority as $listener) {
                 yield $listener;
-            }
-        }
-    }
-
-    /**
-     * Detach a wildcard listener
-     *
-     * @param callable $listener
-     */
-    private function detachWildcardListener(callable $listener)
-    {
-        foreach ($this->wildcardListeners as $index => $struct) {
-            if ($listener === $struct['listener']) {
-                unset($this->wildcardListeners[$index]);
             }
         }
     }

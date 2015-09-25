@@ -9,8 +9,6 @@
 
 namespace Zend\EventManager;
 
-use Traversable;
-
 /**
  * Shared/contextual EventManager
  *
@@ -77,13 +75,7 @@ class SharedEventManager implements SharedEventManagerInterface
             ));
         }
 
-        if (! isset($this->identifiers[$id][$event])) {
-            $this->identifiers[$id][$event] = [];
-        }
-        $listeners[] = $this->identifiers[$id][$event][] = [
-            'listener' => $listener,
-            'priority' => $priority,
-        ];
+        $this->identifiers[$id][$event][((int) $priority) . '.0'][] = $listener;
     }
 
     /**
