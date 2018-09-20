@@ -10,6 +10,9 @@
 namespace Zend\EventManager;
 
 use ArrayObject;
+use Psr\EventDispatcher\EventInterface as PsrEventInterface;
+use Psr\EventDispatcher\StoppableTaskInterface;
+use Psr\EventDispatcher\TaskInterface;
 
 /**
  * Event manager: notification system
@@ -256,6 +259,55 @@ class EventManager implements EventManagerInterface
         }
     }
 
+    public function process(TaskInterface $event) : TaskInterface
+    {
+        $isStoppable = $event instanceof StoppableTaskInterface;
+        foreach ($this->getListenersForEvent($event) as $listener) {
+            $listener($event);
+            if ($isStoppable && $event->isPropagationStopped()) {
+                return $event;
+            }
+        }
+        return $event;
+    }
+
+    public function getListenersForEvent(PsrEventInterface $event) : iterable
+    {
+        $name = ! $event instanceof EventInterface
+            ? get_class($event)
+            : $event->getName() ?: get_class($event);
+
+        if (isset($this->events[$name])) {
+            $listOfListenersByPriority = $this->events[$name];
+
+            if (isset($this->events['*'])) {
+                foreach ($this->events['*'] as $priority => $listOfListeners) {
+                    $listOfListenersByPriority[$priority][] = $listOfListeners[0];
+                }
+            }
+        } elseif (isset($this->events['*'])) {
+            $listOfListenersByPriority = $this->events['*'];
+        } else {
+            $listOfListenersByPriority = [];
+        }
+
+        if ($this->sharedManager) {
+            foreach ($this->sharedManager->getListeners($this->identifiers, $name) as $priority => $listeners) {
+                $listOfListenersByPriority[$priority][] = $listeners;
+            }
+        }
+
+        krsort($listOfListenersByPriority);
+
+        foreach ($listOfListenersByPriority as $listOfListeners) {
+            foreach ($listOfListeners as $listeners) {
+                foreach ($listeners as $listener) {
+                    yield $listener;
+                }
+            }
+        }
+    }
+
     /**
      * Prepare arguments
      *
@@ -288,53 +340,26 @@ class EventManager implements EventManagerInterface
             throw new Exception\RuntimeException('Event is missing a name; cannot trigger!');
         }
 
-        if (isset($this->events[$name])) {
-            $listOfListenersByPriority = $this->events[$name];
-
-            if (isset($this->events['*'])) {
-                foreach ($this->events['*'] as $priority => $listOfListeners) {
-                    $listOfListenersByPriority[$priority][] = $listOfListeners[0];
-                }
-            }
-        } elseif (isset($this->events['*'])) {
-            $listOfListenersByPriority = $this->events['*'];
-        } else {
-            $listOfListenersByPriority = [];
-        }
-
-        if ($this->sharedManager) {
-            foreach ($this->sharedManager->getListeners($this->identifiers, $name) as $priority => $listeners) {
-                $listOfListenersByPriority[$priority][] = $listeners;
-            }
-        }
-
-        // Sort by priority in reverse order
-        krsort($listOfListenersByPriority);
-
         // Initial value of stop propagation flag should be false
         $event->stopPropagation(false);
 
         // Execute listeners
         $responses = new ResponseCollection();
-        foreach ($listOfListenersByPriority as $listOfListeners) {
-            foreach ($listOfListeners as $listeners) {
-                foreach ($listeners as $listener) {
-                    $response = $listener($event);
-                    $responses->push($response);
+        foreach ($this->getListenersForEvent($event) as $listener) {
+            $response = $listener($event);
+            $responses->push($response);
 
-                    // If the event was asked to stop propagating, do so
-                    if ($event->propagationIsStopped()) {
-                        $responses->setStopped(true);
-                        return $responses;
-                    }
+            // If the event was asked to stop propagating, do so
+            if ($event->propagationIsStopped()) {
+                $responses->setStopped(true);
+                return $responses;
+            }
 
-                    // If the result causes our validation callback to return true,
-                    // stop propagation
-                    if ($callback && $callback($response)) {
-                        $responses->setStopped(true);
-                        return $responses;
-                    }
-                }
+            // If the result causes our validation callback to return true,
+            // stop propagation
+            if ($callback && $callback($response)) {
+                $responses->setStopped(true);
+                return $responses;
             }
         }
 

@@ -9,10 +9,16 @@
 
 namespace Zend\EventManager;
 
+use Psr\EventDispatcher\ListenerProviderInterface;
+use Psr\EventDispatcher\TaskProcessorInterface;
+
 /**
  * Interface for messengers
  */
-interface EventManagerInterface extends SharedEventsCapableInterface
+interface EventManagerInterface extends
+    ListenerProviderInterface,
+    SharedEventsCapableInterface,
+    TaskProcessorInterface
 {
     /**
      * Create and trigger an event.
