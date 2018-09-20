@@ -190,11 +190,16 @@ class Event implements EventInterface
     }
 
     /**
-     * Is propagation stopped?
+     * Proxies to isPropagationStopped
      *
      * @return bool
      */
     public function propagationIsStopped()
+    {
+        return $this->isPropagationStopped();
+    }
+
+    public function isPropagationStopped() : bool
     {
         return $this->stopPropagation;
     }
