@@ -4,8 +4,58 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "071997918aabea3d2d5493df994ee3aa",
-    "packages": [],
+    "content-hash": "2248b8f59b158121c097a4b046dacae9",
+    "packages": [
+        {
+            "name": "psr/event-dispatcher",
+            "version": "0.5.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/php-fig/event-dispatcher.git",
+                "reference": "3a8ccc0acc46f76270726cbed7f9a84cce47c12c"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/php-fig/event-dispatcher/zipball/3a8ccc0acc46f76270726cbed7f9a84cce47c12c",
+                "reference": "3a8ccc0acc46f76270726cbed7f9a84cce47c12c",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.1.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.0.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Psr\\EventDispatcher\\": "src/"
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "PHP-FIG",
+                    "homepage": "http://www.php-fig.org/"
+                }
+            ],
+            "description": "Standard interfaces for event handling.",
+            "keywords": [
+                "events",
+                "psr",
+                "psr-14"
+            ],
+            "support": {
+                "source": "https://github.com/php-fig/event-dispatcher/tree/0.5.0",
+                "issues": "https://github.com/php-fig/event-dispatcher/issues"
+            },
+            "time": "2018-09-15T17:00:24+00:00"
+        }
+    ],
     "packages-dev": [
         {
             "name": "beberlei/assert",
