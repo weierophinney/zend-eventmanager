@@ -10,6 +10,7 @@
 namespace Zend\EventManager;
 
 use ArrayAccess;
+use Psr\EventDispatcher\StoppableTaskInterface;
 
 /**
  * Representation of an event
@@ -17,7 +18,7 @@ use ArrayAccess;
  * Encapsulates the target context and parameters passed, and provides some
  * behavior for interacting with the event manager.
  */
-class Event implements EventInterface
+class Event implements EventInterface, StoppableTaskInterface
 {
     /**
      * @var string Event name

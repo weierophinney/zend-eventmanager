@@ -10,12 +10,12 @@
 namespace Zend\EventManager;
 
 use ArrayAccess;
-use Psr\EventDispatcher\StoppableTaskInterface;
+use Psr\EventDispatcher\TaskInterface;
 
 /**
  * Representation of an event
  */
-interface EventInterface extends StoppableTaskInterface
+interface EventInterface extends TaskInterface
 {
     /**
      * Get event name

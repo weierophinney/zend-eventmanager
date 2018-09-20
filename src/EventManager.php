@@ -11,8 +11,10 @@ namespace Zend\EventManager;
 
 use ArrayObject;
 use Psr\EventDispatcher\EventInterface as PsrEventInterface;
+use Psr\EventDispatcher\ListenerProviderInterface;
 use Psr\EventDispatcher\StoppableTaskInterface;
 use Psr\EventDispatcher\TaskInterface;
+use Psr\EventDispatcher\TaskProcessorInterface;
 
 /**
  * Event manager: notification system
@@ -20,7 +22,9 @@ use Psr\EventDispatcher\TaskInterface;
  * Use the EventManager when you want to create a per-instance notification
  * system for your objects.
  */
-class EventManager implements EventManagerInterface
+class EventManager implements
+    EventManagerInterface,
+    TaskProcessorInterface
 {
     /**
      * Subscribed events and their listeners
