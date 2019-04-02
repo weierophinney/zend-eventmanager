@@ -314,6 +314,8 @@ class EventManager implements EventManagerInterface
         // Initial value of stop propagation flag should be false
         $event->stopPropagation(false);
 
+        $stopMethod = $event instanceof StoppableEventInterface ? 'isPropagationStopped' : 'propagationIsStopped';
+
         // Execute listeners
         $responses = new ResponseCollection();
         foreach ($listOfListenersByPriority as $listOfListeners) {
@@ -323,7 +325,7 @@ class EventManager implements EventManagerInterface
                     $responses->push($response);
 
                     // If the event was asked to stop propagating, do so
-                    if ($event->propagationIsStopped()) {
+                    if ($event->{$stopMethod}()) {
                         $responses->setStopped(true);
                         return $responses;
                     }
