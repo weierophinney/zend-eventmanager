@@ -73,7 +73,9 @@ class PrioritizedListenerProvider implements
             }
 
             foreach ($this->events[$name] as $priority => $listOfListeners) {
-                $prioritizedListeners[$priority][] = $listOfListeners[0];
+                $prioritizedListeners[$priority] = isset($prioritizedListeners[$priority])
+                    ? array_merge($prioritizedListeners[$priority], $listOfListeners[0])
+                    : $listOfListeners[0];
             }
         }
 
@@ -189,19 +191,8 @@ class PrioritizedListenerProvider implements
     private function iterateByPriority($prioritizedListeners)
     {
         krsort($prioritizedListeners);
-        foreach ($prioritizedListeners as $listenerSets) {
-            yield from $this->iterateListenerSets($listenerSets);
-        }
-    }
-
-    /**
-     * @param  iterable $listenerSets
-     * @return iterable
-     */
-    private function iterateListenerSets($listenerSets)
-    {
-        foreach ($listenerSets as $listOfListeners) {
-            yield from $listOfListeners;
+        foreach ($prioritizedListeners as $listeners) {
+            yield from $listeners;
         }
     }
 }
