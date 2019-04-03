@@ -10,8 +10,8 @@
   - [x] Modify `EventManager` internals to use the PSR-14 method if available
   - [x] Mark `StoppableEventInterface` as deprecated
 - [ ] Listener provider implementation
-  - [ ] Create a `ListenerProvider` subnamespace
-  - [ ] Create a `ListenerProviderInterface` shim
+  - [x] Create a `ListenerProvider` subnamespace
+  - [x] Create a `ListenerProviderInterface` shim
   - [ ] Create a `PrioritizedListenerProvider` interface extending the
       `ListenerProviderInterface` and defining a
       `getListenersForEventByPriority($event, array $identifiers = []) : array<int, callable[]>` method.
