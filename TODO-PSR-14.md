@@ -12,7 +12,7 @@
 - [ ] Listener provider implementation
   - [x] Create a `ListenerProvider` subnamespace
   - [x] Create a `ListenerProviderInterface` shim
-  - [ ] Create a `PrioritizedListenerProvider` interface extending the
+  - [x] Create a `PrioritizedListenerProvider` interface extending the
       `ListenerProviderInterface` and defining a
       `getListenersForEventByPriority($event, array $identifiers = []) : array<int, callable[]>` method.
   - [ ] Create a `PrioritizedListenerAttachmentInterface`, defining:
