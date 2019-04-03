@@ -2,13 +2,13 @@
 
 ## 3.3.0 forwards-compatibility release
 
-- [ ] `StoppableEventInterface` implementation
+- [x] `StoppableEventInterface` implementation
   - [x] Create a `StoppableEventInterface`
   - [x] Make `Event` implement it
   - [x] Deprecate `propagationIsStopped()` in both `EventInterface` and `Event`
     - [x] Have `Event::propagationIsStopped()` proxy to `Event::isPropagationStopped()`
   - [x] Modify `EventManager` internals to use the PSR-14 method if available
-  - [ ] Mark `StoppableEventInterface` as deprecated
+  - [x] Mark `StoppableEventInterface` as deprecated
 - [ ] Listener provider implementation
   - [ ] Create a `ListenerProvider` subnamespace
   - [ ] Create a `ListenerProviderInterface` shim

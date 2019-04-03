@@ -12,6 +12,9 @@ namespace Zend\EventManager;
  *
  * This interface can be mixed into the `Event` instance to make it
  * forwards-compatible with PSR-14.
+ *
+ * @deprecated This interface is a forwards-compatibility shim for use until we can
+ *     provide full PSR-14 compatibility, and will be removed in version 4.0.
  */
 interface StoppableEventInterface
 {
