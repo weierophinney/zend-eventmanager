@@ -97,6 +97,8 @@ class PrioritizedListenerProvider implements
         }
 
         $this->events[$event][(int) $priority][0][] = $listener;
+
+        return $listener;
     }
 
     /**
@@ -153,6 +155,7 @@ class PrioritizedListenerProvider implements
     public function attachWildcardListener(callable $listener, $priority = 1)
     {
         $this->events['*'][(int) $priority][0][] = $listener;
+        return $listener;
     }
 
     /**
