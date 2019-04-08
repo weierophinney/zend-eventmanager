@@ -17,7 +17,10 @@ use ArrayObject;
  * Use the EventManager when you want to create a per-instance notification
  * system for your objects.
  */
-class EventManager implements EventManagerInterface
+class EventManager implements
+    EventManagerInterface,
+    ListenerProvider\ListenerProviderInterface,
+    ListenerProvider\PrioritizedListenerAttachmentInterface
 {
     /**
      * Subscribed events and their listeners
@@ -198,6 +201,13 @@ class EventManager implements EventManagerInterface
 
     /**
      * @inheritDoc
+     */
+    public function attachWildcardListener(callable $listener, $priority = 1)
+    {
+    }
+
+    /**
+     * @inheritDoc
      * @throws Exception\InvalidArgumentException for invalid event types.
      */
     public function detach(callable $listener, $eventName = null, $force = false)
@@ -249,11 +259,25 @@ class EventManager implements EventManagerInterface
     /**
      * @inheritDoc
      */
+    public function detachWildcardListener(callable $listener)
+    {
+    }
+
+    /**
+     * @inheritDoc
+     */
     public function clearListeners($eventName)
     {
         if (isset($this->events[$eventName])) {
             unset($this->events[$eventName]);
         }
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getListenersForEvent($event)
+    {
     }
 
     /**
