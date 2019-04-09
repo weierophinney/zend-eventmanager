@@ -13,6 +13,9 @@ use ArrayAccess;
 
 /**
  * Representation of an event
+ *
+ * @deprecated since 3.3.0. This interface will be removed in version 4.0, in
+ *     favor of using simple PHP objects as events.
  */
 interface EventInterface
 {
