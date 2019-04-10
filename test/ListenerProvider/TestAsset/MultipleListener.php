@@ -5,15 +5,22 @@
  * @license   https://github.com/zendframework/zend-eventmanager/blob/master/LICENSE.md New BSD License
  */
 
-namespace ZendTest\EventManager\ListenerProvider;
+namespace ZendTest\EventManager\ListenerProvider\TestAsset;
 
-class AbstractListenerSubscriberTest extends ListenerSubscriberTraitTest
+class MultipleListener
 {
-    /**
-     * {@inheritDoc}
-     */
-    public function createProvider(callable $attachmentCallback)
+    public function __invoke($e)
     {
-        return new TestAsset\ExtendedCallbackSubscriber($attachmentCallback);
+        $e->value = __FUNCTION__;
+    }
+
+    public function run($e)
+    {
+        $e->value = __FUNCTION__;
+    }
+
+    public function onEvent($e)
+    {
+        $e->value = __FUNCTION__;
     }
 }

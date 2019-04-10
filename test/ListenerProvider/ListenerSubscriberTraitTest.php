@@ -10,7 +10,6 @@ namespace ZendTest\EventManager\ListenerProvider;
 use PHPUnit\Framework\TestCase;
 use Prophecy\Argument;
 use Zend\EventManager\ListenerProvider\ListenerSubscriberInterface;
-use Zend\EventManager\ListenerProvider\ListenerSubscriberTrait;
 use Zend\EventManager\ListenerProvider\PrioritizedListenerAttachmentInterface;
 
 class ListenerSubscriberTraitTest extends TestCase
@@ -20,23 +19,7 @@ class ListenerSubscriberTraitTest extends TestCase
      */
     public function createProvider(callable $attachmentCallback)
     {
-        return new class($attachmentCallback) implements ListenerSubscriberInterface {
-            use ListenerSubscriberTrait;
-
-            /** @var callable */
-            private $attachmentCallback;
-
-            public function __construct(callable $attachmentCallback)
-            {
-                $this->attachmentCallback = $attachmentCallback;
-            }
-
-            public function attach(PrioritizedListenerAttachmentInterface $provider, $priority = 1)
-            {
-                $attachmentCallback = $this->attachmentCallback->bindTo($this, $this);
-                $attachmentCallback($provider, $priority);
-            }
-        };
+        return new TestAsset\CallbackSubscriber($attachmentCallback);
     }
 
     public function testSubscriberAttachesListeners()

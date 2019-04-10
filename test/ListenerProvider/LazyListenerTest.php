@@ -10,7 +10,6 @@ namespace ZendTest\EventManager\ListenerProvider;
 use PHPUnit\Framework\TestCase;
 use Prophecy\Argument;
 use Psr\Container\ContainerInterface;
-use stdClass;
 use Zend\EventManager\EventInterface;
 use Zend\EventManager\Exception\InvalidArgumentException;
 use Zend\EventManager\ListenerProvider\LazyListener;
@@ -134,22 +133,7 @@ class LazyListenerTest extends TestCase
      */
     public function testInvocationInvokesMethodDefinedInListener($method, $expected)
     {
-        $listener = new class {
-            public function __invoke($e)
-            {
-                $e->value = __FUNCTION__;
-            }
-
-            public function run($e)
-            {
-                $e->value = __FUNCTION__;
-            }
-
-            public function onEvent($e)
-            {
-                $e->value = __FUNCTION__;
-            }
-        };
+        $listener = new TestAsset\MultipleListener();
 
         $this->container
             ->get('listener')
