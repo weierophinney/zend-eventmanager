@@ -383,13 +383,17 @@ class EventManager implements
 
     /**
      * {@inheritDoc}
+     * @todo Use `yield from` once we bump the minimum supported PHP version to 7+.
      * @deprecated This method will be removed in version 4.0, and EventManager
      *     will no longer be its own listener provider; use external listener
      *     providers and the createUsingListenerProvider method instead.
      */
     public function getListenersForEvent($event)
     {
-        yield from $this->provider->getListenersForEvent($event, $this->identifiers);
+        // @todo Use `yield from $this->provider->getListenersForEvent(...)
+        foreach ($this->provider->getListenersForEvent($event, $this->identifiers) as $listener) {
+            yield $listener;
+        }
     }
 
     /**

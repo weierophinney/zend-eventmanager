@@ -41,7 +41,8 @@ class PrioritizedListenerProvider implements
      */
     public function getListenersForEvent($event)
     {
-        yield from $this->iterateByPriority(
+        // @todo Use `yield from $this->iterateByPriority(...)`
+        return $this->iterateByPriority(
             $this->getListenersForEventByPriority($event)
         );
     }
@@ -188,6 +189,7 @@ class PrioritizedListenerProvider implements
     }
 
     /**
+     * @todo   Use `yield from` once we bump the minimum supported PHP version to 7+.
      * @param  array $prioritizedListeners
      * @return iterable
      */
@@ -195,7 +197,10 @@ class PrioritizedListenerProvider implements
     {
         krsort($prioritizedListeners);
         foreach ($prioritizedListeners as $listeners) {
-            yield from $listeners;
+            // @todo `yield from $listeners`
+            foreach ($listeners as $listener) {
+                yield $listener;
+            }
         }
     }
 }

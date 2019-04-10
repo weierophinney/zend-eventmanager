@@ -30,17 +30,24 @@ class PrioritizedAggregateListenerProvider implements PrioritizedListenerProvide
 
     /**
      * {@inheritDoc}
+     * @todo  Use `yield from` once we bump the minimum supported PHP version to 7+.
      * @param string[] $identifiers Any identifiers to use when retrieving
      *     listeners from child providers.
      */
     public function getListenersForEvent($event, array $identifiers = [])
     {
-        yield from $this->iterateByPriority(
-            $this->getListenersForEventByPriority($event, $identifiers)
-        );
+        // @todo `yield from $this->iterateByPriority(...)`
+        foreach ($this->iterateByPriority($this->getListenersForEventByPriority($event, $identifiers)) as $listener) {
+            yield $listener;
+        }
 
-        if ($this->default) {
-            yield from $this->default->getListenersForEvent($event, $identifiers);
+        if (! $this->default) {
+            return;
+        }
+
+        // @todo `yield from $this->default->getListenersForEvent(...)`
+        foreach ($this->default->getListenersForEvent($event, $identifiers) as $listener) {
+            yield $listener;
         }
     }
 
@@ -79,6 +86,7 @@ class PrioritizedAggregateListenerProvider implements PrioritizedListenerProvide
     }
 
     /**
+     * @todo   Use `yield from` once we bump the minimum supported PHP version to 7+.
      * @param  array $prioritizedListeners
      * @return iterable
      */
@@ -86,7 +94,10 @@ class PrioritizedAggregateListenerProvider implements PrioritizedListenerProvide
     {
         krsort($prioritizedListeners);
         foreach ($prioritizedListeners as $listeners) {
-            yield from $listeners;
+            // @todo `yield from $listeners`
+            foreach ($listeners as $listener) {
+                yield $listener;
+            }
         }
     }
 }

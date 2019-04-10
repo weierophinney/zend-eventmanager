@@ -27,12 +27,12 @@ class SharedEventManagerDecorator implements
 
     /**
      * {@inheritDoc}
-     * @var array $identifiers Identifiers provided by dispatcher, if any.
+     * @var iterable $identifiers Identifiers provided by dispatcher, if any.
      *     This argument is deprecated, and will be removed in version 4.
      */
     public function getListenersForEvent($event, array $identifiers = [])
     {
-        yield from $this->getListeners($identifiers, $this->getEventName($event, __METHOD__));
+        return $this->getListeners($identifiers, $this->getEventName($event, __METHOD__));
     }
 
     /**

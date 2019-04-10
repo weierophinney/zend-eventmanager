@@ -297,7 +297,7 @@ class PrioritizedIdentifierListenerProviderTest extends TestCase
     {
         $types = $this->invalidEventNames();
         unset($types['non-traversable-object']);
-        yield from $types;
+        return $types;
     }
 
     /**

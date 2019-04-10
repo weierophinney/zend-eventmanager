@@ -30,15 +30,17 @@ class PrioritizedIdentifierListenerProvider implements
 
     /**
      * {@inheritDoc}
+     * @todo   Use `yield from` once we bump the minimum supported PHP version to 7+.
      * @param  array $identifiers Identifiers from which to match event listeners.
      * @throws Exception\InvalidArgumentException for invalid event types
      * @throws Exception\InvalidArgumentException for invalid identifier types
      */
     public function getListenersForEvent($event, array $identifiers = [])
     {
-        yield from $this->iterateByPriority(
-            $this->getListenersForEventByPriority($event, $identifiers)
-        );
+        // @todo `yield from $this->iterateByPriority(...)`
+        foreach ($this->iterateByPriority($this->getListenersForEventByPriority($event, $identifiers)) as $listener) {
+            yield $listener;
+        }
     }
 
     /**
@@ -265,6 +267,7 @@ class PrioritizedIdentifierListenerProvider implements
     }
 
     /**
+     * @todo   Use `yield from` once we bump the minimum supported PHP version to 7+.
      * @param  array $prioritizedListeners
      * @return iterable
      */
@@ -272,7 +275,10 @@ class PrioritizedIdentifierListenerProvider implements
     {
         krsort($prioritizedListeners);
         foreach ($prioritizedListeners as $listeners) {
-            yield from $listeners;
+            // @todo `yield from $listeners`
+            foreach ($listeners as $listener) {
+                yield $listener;
+            }
         }
     }
 }
