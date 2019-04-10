@@ -63,8 +63,11 @@ class EventManagerWithProviderTest extends TestCase
      * @param array $arguments Arguments to pass to $method
      * @param EventManager $manager Event manager on which to call $method
      */
-    public function testAttachmentMethodsRaiseExceptionForNonAttachableProvider($method, array $arguments, EventManager $manager)
-    {
+    public function testAttachmentMethodsRaiseExceptionForNonAttachableProvider(
+        $method,
+        array $arguments,
+        EventManager $manager
+    ) {
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('instance is not of type ' . PrioritizedListenerAttachmentInterface::class);
         $manager->{$method}(...$arguments);

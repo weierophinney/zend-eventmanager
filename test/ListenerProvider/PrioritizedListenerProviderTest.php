@@ -163,7 +163,7 @@ class PrioritizedListenerProviderTest extends TestCase
         $listener = function ($event) {
         };
         $this->provider->attach('test', $listener);
-        
+
         $event = $this->createEvent();
         $listeners = iterator_to_array($this->provider->getListenersForEvent($event));
         $this->assertSame([$listener], $listeners, 'Expected one listener for event; none found?');
@@ -179,7 +179,7 @@ class PrioritizedListenerProviderTest extends TestCase
         };
         $this->provider->attach('test', $listener);
         $this->provider->attach(Event::class, $listener);
-        
+
         $event     = $this->createEvent();
         $listeners = $this->flattenListeners($this->provider->getListenersForEvent($event));
         $this->assertSame([$listener, $listener], $listeners);
@@ -195,7 +195,7 @@ class PrioritizedListenerProviderTest extends TestCase
         };
         $this->provider->attach('test', $listener);
         $this->provider->attach(Event::class, $listener);
-        
+
         $event     = $this->createEvent();
         $listeners = $this->flattenListeners($this->provider->getListenersForEvent($event));
         $this->assertSame([$listener, $listener], $listeners);
@@ -212,7 +212,7 @@ class PrioritizedListenerProviderTest extends TestCase
         $this->provider->attachWildcardListener($listener);
         $this->provider->attach('test', $listener);
         $this->provider->attach(Event::class, $listener);
-        
+
         $event = $this->createEvent();
         $listeners = $this->flattenListeners($this->provider->getListenersForEvent($event));
         $this->assertSame([$listener, $listener, $listener], $listeners);
@@ -229,7 +229,7 @@ class PrioritizedListenerProviderTest extends TestCase
         $this->provider->attachWildcardListener($listener);
         $this->provider->attach('test', $listener);
         $this->provider->attach(Event::class, $listener);
-        
+
         $event = $this->createEvent();
         $listeners = $this->flattenListeners($this->provider->getListenersForEvent($event));
         $this->assertSame([$listener, $listener, $listener], $listeners);

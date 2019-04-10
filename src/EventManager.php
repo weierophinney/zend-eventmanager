@@ -118,8 +118,11 @@ class EventManager implements
      *     createUsingListenerProvider to ensure that no provider is created during
      *     instantiation.
      */
-    public function __construct(SharedEventManagerInterface $sharedEventManager = null, array $identifiers = [], $skipProviderCreation = false)
-    {
+    public function __construct(
+        SharedEventManagerInterface $sharedEventManager = null,
+        array $identifiers = [],
+        $skipProviderCreation = false
+    ) {
         $this->eventPrototype = new Event();
 
         if ($skipProviderCreation) {

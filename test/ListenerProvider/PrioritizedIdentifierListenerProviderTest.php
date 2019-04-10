@@ -22,8 +22,18 @@ class PrioritizedIdentifierListenerProviderTest extends TestCase
         $this->provider = new PrioritizedIdentifierListenerProvider();
     }
 
-    public function getListeners(PrioritizedIdentifierListenerProvider $provider, array $identifiers, $event, $priority = 1)
-    {
+    /**
+     * @param  string[] $identifiers
+     * @param  string|object $event
+     * @param  int $priority
+     * @return iterable
+     */
+    public function getListeners(
+        PrioritizedIdentifierListenerProvider $provider,
+        array $identifiers,
+        $event,
+        $priority = 1
+    ) {
         $priority = (int) $priority;
         $listeners = $provider->getListenersForEventByPriority($event, $identifiers);
         if (! isset($listeners[$priority])) {
