@@ -7,9 +7,9 @@
 
 namespace ZendTest\EventManager\ListenerProvider;
 
-use ArrayIterator;
 use PHPUnit\Framework\TestCase;
 use Prophecy\Argument;
+use Traversable;
 use Zend\EventManager\Exception;
 use Zend\EventManager\ListenerProvider\PrioritizedIdentifierListenerProvider;
 
@@ -133,7 +133,8 @@ class PrioritizedIdentifierListenerProviderTest extends TestCase
     public function testProviderReturnsEmptyListWhenNoListenersAttachedForEventAndIdentifier()
     {
         $test = $this->provider->getListenersForEvent('EVENT', ['IDENTIFIER']);
-        $this->assertInternalType('iterable', $test);
+        // instead of assertInternalType('iterable'), which requires PHP 7.1+:
+        $this->assertTrue(is_array($test) || $test instanceof Traversable);
         $this->assertCount(0, $test);
     }
 
